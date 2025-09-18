@@ -10,13 +10,7 @@ scikit-learn==1.7.1
 # Production Server
 gunicorn==21.2.0
 
-# Data Profiling
-ydata-profiling==4.16.1
-
-# Visualization (optional dependencies for profiling)
-matplotlib==3.10.0
-seaborn==0.13.2
-
-# Utilities
+# File Processing
+openpyxl==3.1.5
 python-dateutil==2.9.0.post0
 requests==2.32.5
