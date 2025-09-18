@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prepro - Upload & Clean Your Data</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <script>
+    function toggleFillValue() {
+      var method = document.getElementById('missing_method').value;
+      var fillValueDiv = document.getElementById('fill_value_div');
+      fillValueDiv.style.display = (method === 'fill_value') ? 'block' : 'none';
+    }
+  </script>
+</head>
+<body>
+  <h1 class="animate__animated animate__fadeInDown text-center my-4">
+    Prepro - Data Cleaning Made Easy
+  </h1>
+
+  <section class="upload-section animate__animated animate__fadeInUp">
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="alert alert-warning text-center mt-3" role="alert">
+        {% for message in messages %}
+          <p class="mb-0">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Upload Form -->
+    <form method="POST" enctype="multipart/form-data" class="text-center mb-4">
+      <input type="file" name="file" accept=".csv,.xlsx" required class="form-control form-control-lg" />
+      <button type="submit" class="btn btn-primary mt-3">Upload Dataset</button>
+    </form>
+
+    <!-- Data Preview -->
+    {% if preview %}
+    <div class="table-container animate__animated animate__fadeIn mt-3">
+      <h2>Data Preview (First 5 Rows)</h2>
+      {{ preview | safe }}
+      <p><strong>Shape:</strong> {{ shape[0] }} rows × {{ shape[1] }} columns</p>
+    </div>
+    {% endif %}
+
+    <!-- Missing Data Section -->
+    {% if missing_summary %}
+    <div class="table-container animate__animated animate__fadeIn mt-4">
+      <h2>Missing Data Summary</h2>
+      {{ missing_summary | safe }}
+
+      {% if show_missing_options %}
+      <form method="POST" class="mt-3">
+        <label for="missing_method" class="form-label fw-bold">Choose how to handle missing data:</label>
+        <select name="missing_method" id="missing_method" class="form-select" onchange="toggleFillValue()">
+          <option value="drop_rows">Drop Rows with Missing Data</option>
+          <option value="drop_columns">Drop Columns with Missing Data</option>
+          <option value="fill_mean">Fill with Mean (numeric only)</option>
+          <option value="fill_median">Fill with Median (numeric only)</option>
+          <option value="fill_mode">Fill with Mode</option>
+          <option value="fill_value">Fill with Custom Value</option>
+        </select>
+
+        <div id="fill_value_div" style="display:none; margin-top:10px;">
+          <label for="fill_value_text" class="form-label">Custom Fill Value:</label>
+          <input type="text" name="fill_value_text" id="fill_value_text" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-secondary mt-3">Apply</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Duplicate Rows Section -->
+    {% if duplicate_count is defined %}
+    <div class="text-center mt-4">
+      <h3>Duplicate Rows: {{ duplicate_count }}</h3>
+      {% if show_duplicate_options %}
+      <form method="POST" style="display: inline;">
+        <button type="submit" name="remove_duplicates" value="true" class="btn btn-danger">
+          Remove Duplicate Rows
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Outlier Section -->
+    {% if df_exists %}
+    <div class="text-center mt-4">
+      <!-- Step 1: Detect Outliers -->
+      <form method="POST" style="display:inline;">
+        <button type="submit" name="detect_outliers" value="true" class="btn btn-warning">
+          Detect Outliers
+        </button>
+      </form>
+    </div>
+
+    <!-- Step 2: Show Outlier Summary -->
+    {% if show_outlier_summary %}
+    <div class="table-container animate__animated animate__fadeIn mt-4">
+      <h3>Outlier Summary (IQR Method)</h3>
+      {% if outlier_summary %}
+        {{ outlier_summary | safe }}
+        <form method="POST" class="text-center mt-3">
+          <button type="submit" name="remove_outliers_confirm" value="true" class="btn btn-danger">
+            Remove Outliers
+          </button>
+        </form>
+      {% else %}
+        <p class="text-success">No outliers detected in numeric columns!</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Download Cleaned Dataset Button (after outlier removal) -->
+    {% if show_download_cleaned %}
+    <div class="btn-group mt-3 text-center">
+      <a href="{{ url_for('download_file') }}" class="btn btn-success">
+          ⬇️ Download Cleaned Dataset
+      </a>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Profiling Report -->
+    {% if df_exists %}
+    <form action="{{ url_for('profile_report_route') }}" method="get" class="text-center mt-4">
+      <button type="submit" class="btn btn-info w-100">Generate Profiling Report</button>
+    </form>
+    {% endif %}
+
+    <!-- Train-Test Split Section -->
+    {% if df_exists %}
+    <div class="table-container animate__animated animate__fadeIn mt-4">
+      <h2 class="text-center">Train-Test Split</h2>
+      <form method="POST" class="train-test-form">
+
+        <div class="form-group">
+          <label for="target_column">Target Column:</label>
+          <select id="target_column" name="target_column" required>
+            {% for col in columns %}
+            <option value="{{ col }}">{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="test_size">Test Size (0.1 - 0.9):</label>
+          <input type="number" id="test_size" name="test_size" min="0.1" max="0.9" step="0.05" value="0.2" required>
+        </div>
+
+        <div class="form-group">
+          <label for="stratify">Stratified Split:</label>
+          <select id="stratify" name="stratify">
+            <option value="yes" selected>Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
+        <div class="form-group d-flex align-items-end">
+          <button type="submit" class="btn btn-split">Split</button>
+        </div>
+
+      </form>
+
+      {% if split_done %}
+      <p class="text-center mt-3">
+        <strong>Train Shape:</strong> {{ train_shape[0] }} × {{ train_shape[1] }},
+        <strong>Test Shape:</strong> {{ test_shape[0] }} × {{ test_shape[1] }}
+      </p>
+      <div class="btn-group">
+        <a href="{{ url_for('download_dataset', dataset='train') }}" class="btn btn-success">Download Train</a>
+        <a href="{{ url_for('download_dataset', dataset='test') }}" class="btn btn-danger">Download Test</a>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+  </section>
+
+  <footer class="text-center mt-5">
+    <p>© 2025 Prepro - Data Cleaning Tool</p>
+  </footer>
+  
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

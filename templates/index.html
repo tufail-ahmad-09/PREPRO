@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prepro - Advanced Data Preprocessing Platform</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header class="text-center py-4">
+    <h1 class="animate__animated animate__fadeInDown">
+      <i class="fas fa-chart-line me-3"></i>
+      Prepro
+      <span class="d-block fs-6 mt-2 text-muted">Advanced Data Preprocessing Platform</span>
+    </h1>
+  </header>
+
+  <main class="upload-section">
+    <!-- Alert Messages -->
+    <div id="alert-container" class="alert-container"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p class="text-muted">Processing your data with AI-powered algorithms...</p>
+    </div>
+
+    <!-- Upload Section -->
+    <section id="upload-section" class="card animate__animated animate__fadeInUp">
+      <div class="text-center">
+        <div class="mb-4">
+          <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+          <h2>Upload Your Dataset</h2>
+          <p class="text-muted">Support for CSV and Excel files up to 100MB</p>
+        </div>
+
+        <form id="upload-form">
+          <div class="file-upload">
+            <input type="file" id="file-input" name="file" accept=".csv,.xlsx" required class="file-input" />
+            <label for="file-input" class="file-label">
+              <i class="fas fa-file-upload file-icon"></i>
+              <span>
+                <strong>Choose file</strong> or drag and drop
+                <br><small class="text-muted">CSV, XLSX files only</small>
+              </span>
+            </label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-rocket me-2"></i>
+            Start Processing
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Data Overview Section -->
+    <section id="overview-section" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-chart-bar me-2"></i>Dataset Overview</h2>
+        <div class="stats-grid" id="stats-grid">
+          <!-- Stats will be populated here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Data Preview Section -->
+    <section id="preview-section" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-table me-2"></i>Data Preview</h2>
+        <div class="table-container">
+          <div id="preview-table"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Missing Data Section -->
+    <section id="missing-section" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-exclamation-triangle me-2"></i>Missing Data Analysis</h2>
+        <div class="table-container">
+          <div id="missing-summary"></div>
+        </div>
+
+        <div id="missing-options" class="hidden mt-4">
+          <div class="row align-items-end">
+            <div class="col-md-4">
+              <label for="missing_method" class="form-label">
+                <i class="fas fa-cog me-1"></i>Treatment Method
+              </label>
+              <select id="missing_method" class="form-control" onchange="toggleFillValue()">
+                <option value="drop_rows">Drop Rows with Missing Data</option>
+                <option value="drop_columns">Drop Columns with Missing Data</option>
+                <option value="fill_mean">Fill with Mean (numeric only)</option>
+                <option value="fill_median">Fill with Median (numeric only)</option>
+                <option value="fill_mode">Fill with Mode</option>
+                <option value="fill_value">Fill with Custom Value</option>
+              </select>
+            </div>
+
+            <div class="col-md-4" id="fill_value_div" style="display:none;">
+              <label for="fill_value_text" class="form-label">Custom Fill Value</label>
+              <input type="text" id="fill_value_text" class="form-control" placeholder="Enter value..." />
+            </div>
+
+            <div class="col-md-4">
+              <button type="button" id="apply-missing" class="btn btn-success w-100">
+                <i class="fas fa-check me-2"></i>Apply Treatment
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Duplicate Data Section -->
+    <section id="duplicate-section" class="hidden">
+      <div class="card text-center">
+        <h2><i class="fas fa-copy me-2"></i>Duplicate Analysis</h2>
+        <div class="stat-card d-inline-block mb-3">
+          <div class="stat-value" id="duplicate-count">0</div>
+          <div class="stat-label">Duplicate Rows Found</div>
+        </div>
+        <br>
+        <button id="remove-duplicates-btn" class="btn btn-danger hidden">
+          <i class="fas fa-trash me-2"></i>Remove Duplicates
+        </button>
+      </div>
+    </section>
+
+    <!-- Outlier Detection Section -->
+    <section id="outlier-section" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-search me-2"></i>Outlier Detection</h2>
+        <div class="text-center mb-4">
+          <p class="text-muted">Detect anomalous data points using IQR method</p>
+          <button id="detect-outliers-btn" class="btn btn-warning">
+            <i class="fas fa-scanner me-2"></i>Scan for Outliers
+          </button>
+        </div>
+
+        <div id="outlier-summary-section" class="hidden">
+          <div class="table-container">
+            <h3>Outlier Analysis Results</h3>
+            <div id="outlier-summary"></div>
+          </div>
+          <div class="text-center">
+            <button id="remove-outliers-btn" class="btn btn-danger hidden">
+              <i class="fas fa-broom me-2"></i>Remove Outliers
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Train-Test Split Section -->
+    <section id="split-section" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-random me-2"></i>Train-Test Split</h2>
+        <p class="text-muted text-center mb-4">Prepare your data for machine learning</p>
+
+        <form id="split-form" class="train-test-form">
+          <div class="form-group">
+            <label for="target_column" class="form-label">
+              <i class="fas fa-bullseye me-1"></i>Target Column
+            </label>
+            <select id="target_column" name="target_column" class="form-control" required>
+              <!-- Options will be populated dynamically -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="test_size" class="form-label">
+              <i class="fas fa-percentage me-1"></i>Test Size
+            </label>
+            <input type="number" id="test_size" name="test_size" min="0.1" max="0.9" step="0.05" value="0.2" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="stratify" class="form-label">
+              <i class="fas fa-layer-group me-1"></i>Stratified Split
+            </label>
+            <select id="stratify" name="stratify" class="form-control">
+              <option value="yes" selected>Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-cut me-2"></i>Split Dataset
+            </button>
+          </div>
+        </form>
+
+        <div id="split-results" class="hidden mt-4">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="train-rows">0</div>
+              <div class="stat-label">Training Rows</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="test-rows">0</div>
+              <div class="stat-label">Testing Rows</div>
+            </div>
+          </div>
+
+          <div class="btn-group mt-4">
+            <a href="{{ url_for('download_dataset', dataset='train') }}" class="btn btn-success">
+              <i class="fas fa-download me-2"></i>Download Training Set
+            </a>
+            <a href="{{ url_for('download_dataset', dataset='test') }}" class="btn btn-info">
+              <i class="fas fa-download me-2"></i>Download Test Set
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Panel -->
+    <section id="action-panel" class="hidden">
+      <div class="card">
+        <h2><i class="fas fa-tools me-2"></i>Export & Analysis</h2>
+        <div class="btn-group">
+          <a href="{{ url_for('download_file') }}" class="btn btn-success btn-lg">
+            <i class="fas fa-file-csv me-2"></i>Download Cleaned Data
+          </a>
+          <a href="{{ url_for('profile_report_route') }}" target="_blank" class="btn btn-info btn-lg">
+            <i class="fas fa-chart-pie me-2"></i>Generate Data Report
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="text-center">
+      <p class="mb-2">
+        <i class="fas fa-code me-2"></i>
+        Built with ❤️ for Data Scientists
+      </p>
+      <p class="text-muted">
+        © 2025 Prepro - Advanced Data Preprocessing Platform
+      </p>
+    </div>
+  </footer>
+  
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Global variables
+    let dataExists = false;
+    let columns = [];
+
+    // Utility functions
+    function showLoading() {
+      document.getElementById('loading').classList.remove('hidden');
+      // Add blur effect to main content
+      document.querySelector('main').style.filter = 'blur(2px)';
+      document.querySelector('main').style.pointerEvents = 'none';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').classList.add('hidden');
+      // Remove blur effect
+      document.querySelector('main').style.filter = 'none';
+      document.querySelector('main').style.pointerEvents = 'auto';
+    }
+
+    function showAlert(message, type = 'info') {
+      const alertContainer = document.getElementById('alert-container');
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show animate__animated animate__slideInDown`;
+      alertDiv.innerHTML = `
+        <i class="fas fa-${getAlertIcon(type)} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      alertContainer.appendChild(alertDiv);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (alertDiv.parentNode) {
+          alertDiv.classList.add('animate__slideOutUp');
+          setTimeout(() => alertDiv.remove(), 500);
+        }
+      }, 5000);
+    }
+
+    function getAlertIcon(type) {
+      const icons = {
+        'success': 'check-circle',
+        'danger': 'exclamation-triangle',
+        'warning': 'exclamation-circle',
+        'info': 'info-circle'
+      };
+      return icons[type] || 'info-circle';
+    }
+
+    function createStatsCards(data) {
+      const statsGrid = document.getElementById('stats-grid');
+      statsGrid.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${data.shape[0].toLocaleString()}</div>
+          <div class="stat-label"><i class="fas fa-table me-1"></i>Total Rows</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${data.shape[1]}</div>
+          <div class="stat-label"><i class="fas fa-columns me-1"></i>Total Columns</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${data.duplicate_count.toLocaleString()}</div>
+          <div class="stat-label"><i class="fas fa-copy me-1"></i>Duplicates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${(data.shape[0] * data.shape[1]).toLocaleString()}</div>
+          <div class="stat-label"><i class="fas fa-th me-1"></i>Total Cells</div>
+        </div>
+      `;
+    }
+
+    function updateDataPreview(data) {
+      document.getElementById('preview-table').innerHTML = data.preview;
+      document.getElementById('preview-section').classList.remove('hidden');
+      
+      // Add animation
+      document.getElementById('preview-section').classList.add('animate__animated', 'animate__fadeInUp');
+    }
+
+    function updateMissingDataSection(data) {
+      if (data.missing_summary) {
+        document.getElementById('missing-summary').innerHTML = data.missing_summary;
+        document.getElementById('missing-section').classList.remove('hidden');
+        
+        if (data.show_missing_options) {
+          document.getElementById('missing-options').classList.remove('hidden');
+        }
+        
+        // Add animation
+        document.getElementById('missing-section').classList.add('animate__animated', 'animate__fadeInUp');
+      }
+    }
+
+    function updateDuplicateSection(data) {
+      document.getElementById('duplicate-count').textContent = data.duplicate_count.toLocaleString();
+      document.getElementById('duplicate-section').classList.remove('hidden');
+      
+      if (data.show_duplicate_options) {
+        document.getElementById('remove-duplicates-btn').classList.remove('hidden');
+      } else {
+        document.getElementById('remove-duplicates-btn').classList.add('hidden');
+      }
+      
+      // Add animation
+      document.getElementById('duplicate-section').classList.add('animate__animated', 'animate__fadeInUp');
+    }
+
+    function updateColumnsDropdown(columns) {
+      const targetSelect = document.getElementById('target_column');
+      targetSelect.innerHTML = '';
+      columns.forEach(col => {
+        const option = document.createElement('option');
+        option.value = col;
+        option.textContent = col;
+        targetSelect.appendChild(option);
+      });
+    }
+
+    function showAllSections() {
+      const sections = ['overview-section', 'outlier-section', 'split-section', 'action-panel'];
+      sections.forEach((sectionId, index) => {
+        setTimeout(() => {
+          const section = document.getElementById(sectionId);
+          section.classList.remove('hidden');
+          section.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 200);
+      });
+    }
+
+    function toggleFillValue() {
+      const method = document.getElementById('missing_method').value;
+      const fillValueDiv = document.getElementById('fill_value_div');
+      fillValueDiv.style.display = (method === 'fill_value') ? 'block' : 'none';
+    }
+
+    // Enhanced file input handling
+    const fileInput = document.getElementById('file-input');
+    const fileLabel = document.querySelector('.file-label');
+
+    fileInput.addEventListener('change', function(e) {
+      const fileName = e.target.files[0]?.name || 'Choose file or drag and drop';
+      fileLabel.querySelector('span').innerHTML = `
+        <strong>${fileName}</strong>
+        <br><small class="text-muted">Ready to upload</small>
+      `;
+    });
+
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      fileLabel.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      fileLabel.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      fileLabel.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+      fileLabel.style.borderColor = 'var(--accent-color)';
+      fileLabel.style.background = 'rgba(102, 126, 234, 0.1)';
+    }
+
+    function unhighlight(e) {
+      fileLabel.style.borderColor = 'var(--border-color)';
+      fileLabel.style.background = 'var(--bg-card)';
+    }
+
+    fileLabel.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      fileInput.files = files;
+      
+      const fileName = files[0]?.name || 'Choose file or drag and drop';
+      fileLabel.querySelector('span').innerHTML = `
+        <strong>${fileName}</strong>
+        <br><small class="text-muted">Ready to upload</small>
+      `;
+    }
+
+    // Event Listeners
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('file-input');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showAlert('Please select a file to upload.', 'warning');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          dataExists = true;
+          columns = data.columns;
+          
+          createStatsCards(data);
+          updateDataPreview(data);
+          updateMissingDataSection(data);
+          updateDuplicateSection(data);
+          updateColumnsDropdown(data.columns);
+          showAllSections();
+          
+          showAlert(data.message, 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error uploading file: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('apply-missing').addEventListener('click', async function() {
+      const method = document.getElementById('missing_method').value;
+      const fillValue = document.getElementById('fill_value_text').value;
+
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/handle_missing', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            missing_method: method,
+            fill_value: fillValue
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          createStatsCards(data);
+          updateDataPreview(data);
+          updateDuplicateSection(data);
+          updateColumnsDropdown(data.columns);
+          
+          // Hide missing options after handling
+          document.getElementById('missing-options').classList.add('hidden');
+          
+          showAlert(data.message, 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error handling missing data: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('remove-duplicates-btn').addEventListener('click', async function() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/remove_duplicates', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          createStatsCards(data);
+          updateDataPreview(data);
+          updateMissingDataSection(data);
+          updateDuplicateSection(data);
+          updateColumnsDropdown(data.columns);
+          
+          showAlert(data.message, 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error removing duplicates: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('detect-outliers-btn').addEventListener('click', async function() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/detect_outliers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          if (data.show_outlier_summary) {
+            document.getElementById('outlier-summary').innerHTML = data.outlier_summary;
+            document.getElementById('outlier-summary-section').classList.remove('hidden');
+            document.getElementById('remove-outliers-btn').classList.remove('hidden');
+          } else {
+            document.getElementById('outlier-summary-section').classList.add('hidden');
+            document.getElementById('remove-outliers-btn').classList.add('hidden');
+          }
+          
+          showAlert(data.message, data.show_outlier_summary ? 'warning' : 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error detecting outliers: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('remove-outliers-btn').addEventListener('click', async function() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/remove_outliers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          createStatsCards(data);
+          updateDataPreview(data);
+          updateMissingDataSection(data);
+          updateDuplicateSection(data);
+          updateColumnsDropdown(data.columns);
+          
+          // Hide outlier summary after removal
+          document.getElementById('outlier-summary-section').classList.add('hidden');
+          
+          showAlert(data.message, 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error removing outliers: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('split-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const targetColumn = document.getElementById('target_column').value;
+      const testSize = document.getElementById('test_size').value;
+      const stratify = document.getElementById('stratify').value;
+
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/train_test_split', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            target_column: targetColumn,
+            test_size: testSize,
+            stratify: stratify
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('train-rows').textContent = data.train_shape[0].toLocaleString();
+          document.getElementById('test-rows').textContent = data.test_shape[0].toLocaleString();
+          document.getElementById('split-results').classList.remove('hidden');
+          
+          showAlert(data.message, 'success');
+        } else {
+          showAlert(data.message, 'danger');
+        }
+      } catch (error) {
+        showAlert('Error splitting dataset: ' + error.message, 'danger');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    // Initialize page with smooth animations
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add staggered animations to initial elements
+      const elements = document.querySelectorAll('.animate__animated');
+      elements.forEach((el, index) => {
+        el.style.animationDelay = `${index * 0.1}s`;
+      });
+    });
+  </script>
+</body>
+</html>

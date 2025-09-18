@@ -1,0 +1,38 @@
+# Virtual Environment
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Uploaded Files (optional - you might want to keep sample data)
+uploads/*.csv
+uploads/*.xlsx
+uploads/*.txt
+!uploads/.gitkeep
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
