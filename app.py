@@ -292,4 +292,5 @@ def download_dataset(dataset):
     return send_file(io.BytesIO(buffer.getvalue().encode()), mimetype="text/csv", as_attachment=True, download_name=f"{dataset}_dataset.csv")
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(debug=os.environ.get("FLASK_ENV") != "production", host="0.0.0.0", port=port)
